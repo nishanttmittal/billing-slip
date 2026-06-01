@@ -1,0 +1,9 @@
+@import "tailwindcss";
+
+@media print {
+  .no-print { display: none !important; }
+  body { background: white !important; }
+  @page { margin: 12mm; size: A4; }
+}
+
+input[type=number]::-webkit-inner-spin-button { opacity: 1; }
