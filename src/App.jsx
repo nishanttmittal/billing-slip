@@ -1,94 +1,30 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import html2canvas from 'html2canvas'
+import { signInWithGoogle, signOutUser, watchAuth, isAllowed } from './firebase'
 
 const GST = 0.18
-const DEFAULT_PASSWORD = 'nsp@123'
-const ADMIN_PASSWORD = '6133923_N'
 const today = () => new Date().toISOString().split('T')[0]
 const fmt = (n) => '₹' + Math.round(Number(n)).toLocaleString('en-IN')
 const fmtDate = (d) => d ? new Date(d + 'T00:00:00').toLocaleDateString('en-IN') : ''
 
 const loadProducts = () => { try { return JSON.parse(localStorage.getItem('productNames') || '[]') } catch { return [] } }
 const saveProducts = (list) => localStorage.setItem('productNames', JSON.stringify(list))
-const getPassword = () => localStorage.getItem('appPassword') || DEFAULT_PASSWORD
-const setPassword = (p) => localStorage.setItem('appPassword', p)
 
 let _id = 1
 const uid = () => ++_id
 const blankRow = () => ({ id: uid(), name: '', qty: '', price1: '', price2: '' })
 const blankPayment = () => ({ id: uid(), amount: '', date: today() })
 
-// ── Login Screen ──────────────────────────────────────────────────────────
-function LoginScreen({ onLogin }) {
-  const [pwd, setPwd] = useState('')
-  const [error, setError] = useState('')
-  const attempt = () => {
-    if (pwd === getPassword()) onLogin()
-    else { setError('Incorrect password'); setPwd('') }
-  }
+// ── Login Screen (Google sign-in) ──────────────────────────────────────────
+function LoginScreen({ error, onSignIn }) {
   return (
     <div className="min-h-screen bg-slate-100 flex items-center justify-center">
-      <div className="bg-white rounded-2xl shadow-2xl p-8 w-80">
-        <div className="text-center mb-6">
-          <div className="text-4xl mb-3">🔒</div>
-          <h1 className="text-xl font-bold text-gray-800">Billing Slip</h1>
-          <p className="text-sm text-gray-400 mt-1">Enter password to continue</p>
-        </div>
-        <div className="space-y-3">
-          <input type="password" value={pwd} autoFocus placeholder="Password"
-            onChange={e => { setPwd(e.target.value); setError('') }}
-            onKeyDown={e => e.key === 'Enter' && attempt()}
-            className={`w-full border-2 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 ${error ? 'border-red-400' : 'border-gray-300'}`}
-          />
-          {error && <p className="text-xs text-red-500 font-medium">{error}</p>}
-          <button onClick={attempt} className="w-full bg-blue-700 text-white rounded-lg py-3 font-semibold hover:bg-blue-800 transition-colors">Login</button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ── Change Password Modal ─────────────────────────────────────────────────
-function ChangePasswordModal({ onClose }) {
-  const [current, setCurrent] = useState('')
-  const [newPwd, setNewPwd] = useState('')
-  const [confirm, setConfirm] = useState('')
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState(false)
-  const save = () => {
-    if (current !== ADMIN_PASSWORD) return setError('Incorrect admin password')
-    if (newPwd.length < 4) return setError('New password must be at least 4 characters')
-    if (newPwd !== confirm) return setError('Passwords do not match')
-    setPassword(newPwd)
-    setSuccess(true)
-    setTimeout(onClose, 1200)
-  }
-  return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-      <div className="bg-white rounded-2xl shadow-2xl p-6 w-80">
-        <h2 className="font-bold text-gray-800 mb-4">Change Password</h2>
-        {success ? (
-          <div className="text-center py-4 text-green-600 font-semibold">✓ Password changed!</div>
-        ) : (
-          <div className="space-y-3">
-            {[
-              { label: 'Admin Password',   val: current, set: setCurrent },
-              { label: 'New Password',     val: newPwd,  set: setNewPwd  },
-              { label: 'Confirm Password', val: confirm, set: setConfirm },
-            ].map(({ label, val, set }) => (
-              <label key={label} className="flex flex-col gap-1">
-                <span className="text-xs font-semibold text-gray-500">{label}</span>
-                <input type="password" value={val} onChange={e => { set(e.target.value); setError('') }}
-                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
-              </label>
-            ))}
-            {error && <p className="text-xs text-red-500 font-medium">{error}</p>}
-            <div className="flex gap-2 pt-1">
-              <button onClick={onClose} className="flex-1 border border-gray-300 rounded-lg py-2 text-sm text-gray-600 hover:bg-gray-50">Cancel</button>
-              <button onClick={save} className="flex-1 bg-blue-700 text-white rounded-lg py-2 text-sm font-semibold hover:bg-blue-800">Save</button>
-            </div>
-          </div>
-        )}
+      <div className="bg-white rounded-2xl shadow-2xl p-8 w-80 text-center">
+        <div className="text-4xl mb-3">🔒</div>
+        <h1 className="text-xl font-bold text-gray-800">Billing Slip</h1>
+        <p className="text-sm text-gray-400 mt-1 mb-6">Sign in to continue</p>
+        <button onClick={onSignIn} className="w-full bg-blue-700 text-white rounded-lg py-3 font-semibold hover:bg-blue-800 transition-colors">Sign in with Google</button>
+        {error && <p className="text-xs text-red-500 font-medium mt-3">{error}</p>}
       </div>
     </div>
   )
@@ -306,8 +242,9 @@ function SlipExport({ date, customer, rows, taxPayments, cashPayments, taxOldBal
 
 // ── Main App ──────────────────────────────────────────────────────────────
 export default function App() {
-  const [loggedIn, setLoggedIn] = useState(false)
-  const [showChangePwd, setShowChangePwd] = useState(false)
+  const [user, setUser] = useState(null)
+  const [authReady, setAuthReady] = useState(false)
+  const [authError, setAuthError] = useState('')
   const [date, setDate] = useState(today())
   const [customer, setCustomer] = useState('')
   const [rows, setRows] = useState([blankRow()])
@@ -319,7 +256,25 @@ export default function App() {
   const [exporting, setExporting] = useState(false)
   const exportRef = useRef()
 
-  if (!loggedIn) return <LoginScreen onLogin={() => setLoggedIn(true)} />
+  useEffect(() => watchAuth(u => { setUser(u); setAuthReady(true) }), [])
+
+  const handleSignIn = async () => {
+    setAuthError('')
+    try {
+      const { user: u } = await signInWithGoogle()
+      if (!isAllowed(u?.email)) {
+        await signOutUser()
+        setAuthError('This Google account is not authorised. Contact the owner.')
+      }
+    } catch {
+      setAuthError('Sign-in failed. Please try again.')
+    }
+  }
+
+  if (!authReady)
+    return <div className="min-h-screen bg-slate-100 flex items-center justify-center text-gray-400">Loading…</div>
+  if (!user || !isAllowed(user.email))
+    return <LoginScreen error={authError} onSignIn={handleSignIn} />
 
   // Calculations
   const validRows = rows.filter(r => r.name && Number(r.qty) > 0 && Number(r.price1) > 0)
@@ -391,15 +346,13 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-100">
-      {showChangePwd && <ChangePasswordModal onClose={() => setShowChangePwd(false)} />}
-
       <header className="bg-blue-900 text-white px-6 py-4 shadow-xl">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold">Billing Slip</h1>
             <p className="text-blue-300 text-sm">Enter details · Export as JPEG</p>
           </div>
-          <button onClick={() => setShowChangePwd(true)} className="text-blue-300 hover:text-white text-xs underline">🔑 Change Password</button>
+          <button onClick={signOutUser} className="text-blue-300 hover:text-white text-xs underline">Sign out</button>
         </div>
       </header>
 
