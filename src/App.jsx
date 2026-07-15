@@ -106,7 +106,7 @@ function ProductInput({ value, onChange, suggestions }) {
         onChange={e => { onChange(e.target.value); setOpen(true) }}
         onFocus={() => setOpen(true)}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
-        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+        className="w-full min-w-[200px] border border-gray-300 rounded-lg px-3 py-2.5 text-base font-semibold focus:outline-none focus:ring-2 focus:ring-blue-400"
       />
       {open && filtered.length > 0 && (
         <ul className="absolute z-50 bg-white border border-gray-200 rounded-lg shadow-lg mt-1 w-full max-h-48 overflow-y-auto">
@@ -141,7 +141,8 @@ function PaymentSection({ label, total, balance, payments, setPayments, oldBalan
         <span className="text-xs font-semibold text-amber-700 whitespace-nowrap">Old Balance</span>
         <input type="number" value={oldBalance} min="0" placeholder="0.00"
           onChange={e => setOldBalance(e.target.value)}
-          className="flex-1 border border-amber-300 rounded-lg px-2 py-1.5 text-sm font-mono bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+          style={{ minWidth: '11ch' }}
+          className="flex-1 border border-amber-300 rounded-lg px-2 py-2 text-base font-mono bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
         />
         {Number(oldBalance) > 0 && (
           <span className="text-xs text-amber-600 font-semibold whitespace-nowrap">
@@ -156,7 +157,8 @@ function PaymentSection({ label, total, balance, payments, setPayments, oldBalan
             <span className="text-xs text-gray-400 w-4">{i + 1}.</span>
             <input type="number" value={p.amount} min="0" placeholder="Amount"
               onChange={e => setP(p.id, 'amount', e.target.value)}
-              className={`flex-1 border border-gray-300 rounded-lg px-2 py-1.5 text-sm font-mono focus:outline-none focus:ring-2 ${isBlue ? 'focus:ring-blue-400' : 'focus:ring-green-400'}`}
+              style={{ minWidth: '9ch' }}
+              className={`flex-1 border border-gray-300 rounded-lg px-2 py-2 text-base font-mono focus:outline-none focus:ring-2 ${isBlue ? 'focus:ring-blue-400' : 'focus:ring-green-400'}`}
             />
             <input type="date" value={p.date}
               onChange={e => setP(p.id, 'date', e.target.value)}
@@ -427,10 +429,10 @@ export default function App() {
               <thead>
                 <tr className="bg-slate-50 text-xs text-gray-500 uppercase tracking-wide">
                   <th className="py-2.5 px-3 text-left">Product Name</th>
-                  <th className="py-2.5 px-2 text-right w-20">Qty</th>
+                  <th className="py-2.5 px-2 text-right w-24">Qty</th>
                   <th className="py-2.5 px-2 text-right w-28">Price 1</th>
                   <th className="py-2.5 px-2 text-right w-28">Price 2 (Tax)</th>
-                  <th className="py-2.5 px-3 text-right w-28">Amount</th>
+                  <th className="py-2.5 px-3 text-right w-40">Amount</th>
                   <th className="w-8"></th>
                 </tr>
               </thead>
@@ -440,10 +442,10 @@ export default function App() {
                   return (
                     <tr key={r.id} className="border-t border-gray-100">
                       <td className="py-2 px-3"><ProductInput value={r.name} onChange={v => setRow(r.id, 'name', v)} suggestions={productNames} /></td>
-                      <td className="py-2 px-2"><input type="number" value={r.qty} min="0" placeholder="0" onChange={e => setRow(r.id, 'qty', e.target.value)} className="w-full border border-gray-300 rounded-lg px-2 py-2 text-sm text-right font-mono focus:outline-none focus:ring-2 focus:ring-blue-400" /></td>
-                      <td className="py-2 px-2"><input type="number" value={r.price1} min="0" placeholder="0.00" onChange={e => setRow(r.id, 'price1', e.target.value)} className="w-full border border-gray-300 rounded-lg px-2 py-2 text-sm text-right font-mono focus:outline-none focus:ring-2 focus:ring-blue-400" /></td>
-                      <td className="py-2 px-2"><input type="number" value={r.price2} min="0" placeholder="0.00" onChange={e => setRow(r.id, 'price2', e.target.value)} className="w-full border border-gray-300 rounded-lg px-2 py-2 text-sm text-right font-mono focus:outline-none focus:ring-2 focus:ring-blue-400" /></td>
-                      <td className="py-2 px-3 text-right font-mono font-semibold text-gray-700 text-sm">{amt > 0 ? fmt(amt) : '—'}</td>
+                      <td className="py-2 px-2"><input type="number" value={r.qty} min="0" placeholder="0" onChange={e => setRow(r.id, 'qty', e.target.value)} className="w-full border border-gray-300 rounded-lg px-2 py-2 text-base text-right font-mono focus:outline-none focus:ring-2 focus:ring-blue-400" /></td>
+                      <td className="py-2 px-2"><input type="number" value={r.price1} min="0" placeholder="0.00" onChange={e => setRow(r.id, 'price1', e.target.value)} className="w-full border border-gray-300 rounded-lg px-2 py-2 text-base text-right font-mono focus:outline-none focus:ring-2 focus:ring-blue-400" /></td>
+                      <td className="py-2 px-2"><input type="number" value={r.price2} min="0" placeholder="0.00" onChange={e => setRow(r.id, 'price2', e.target.value)} className="w-full border border-gray-300 rounded-lg px-2 py-2 text-base text-right font-mono focus:outline-none focus:ring-2 focus:ring-blue-400" /></td>
+                      <td className="py-2 px-3 text-right font-mono font-bold text-gray-800 text-base whitespace-nowrap">{amt > 0 ? fmt(amt) : '—'}</td>
                       <td className="py-2 px-2"><button onClick={() => removeRow(r.id)} className="text-gray-300 hover:text-red-500 text-xl leading-none">×</button></td>
                     </tr>
                   )
